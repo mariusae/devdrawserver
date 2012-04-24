@@ -1,0 +1,21 @@
+DEVDRAW
+
+  Devdrawserver is a client-server devdraw[1]. It allows for later
+  attachment, so it can easily be run on a remote machine, proxying the
+  draw calls to a local devdraw.
+  
+  On a remote machine:
+  
+  	remote% DEVDRAW=devdrawserver acme
+  
+  and locally:
+  
+  	% dialdevdraw 'ssh remote dial -e unix!/tmp/devdrawserver'
+  	
+  This is still work in progress, but it's fully functional.
+
+BUGS
+
+  Wouldn't be needed at all if devdraw was a real file server.
+
+[1] http://swtch.com/plan9port/man/man1/devdraw.html
