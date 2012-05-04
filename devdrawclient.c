@@ -17,7 +17,6 @@ main(int argc, char **argv)
 	devdraw = getenv("DEVDRAW");
 	if(devdraw == nil)
 		devdraw = "devdraw";
-	fprint(2, "exec %s\n", devdraw);
 	if(execl(devdraw, devdraw, "(devdraw)", nil) < 0)
 		sysfatal("execl: %r");
 

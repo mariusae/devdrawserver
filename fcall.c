@@ -31,19 +31,24 @@ readfcalls(int fd)
 	return ch;
 }
 
-// channel carries the error (%r).
+
+
 Channel *
 procproxyfcalls(int readfd, int writefd)
 {
-	int *fds;
+	void **argv;
+	Channel *c;
 
-	if ((fds = malloc(2*sizeof(int))) == nil)
+	if ((argv = malloc(3*sizeof(void*))) == nil)
 		sysfatal("malloc: %r");
-	
-	fds[0] = readfd;
-	fds[1] = writefd;
-	proccreate(proxyfcallsproc, fds, 1<<15);
-	return nil;
+
+	c = chancreate(sizeof(void*), 0);
+	argv[0] = (void*)(intptr)readfd;
+	argv[1] = (void*)(intptr)writefd;
+	argv[2] = c;
+	proccreate(proxyfcallsproc, argv, 1<<15);
+
+	return c;
 }
 
 void
@@ -52,24 +57,31 @@ proxyfcalls(int readfd, int writefd)
 	int r;
 	uchar *mbuf = nil;
 
-	do{
+	for(;;){
 		if((mbuf = readmsg(readfd)) == nil)
 			break;
 		r = writemsg(writefd, mbuf);
 		free(mbuf);
-	}while(r >= 0);
+		if(r < 0)
+			break;
+	}
+
 }
 
 static void
 proxyfcallsproc(void *arg)
 {
-	int *fds = (int*)arg;
 	int writefd, readfd;
-	
-	readfd = fds[0];
-	writefd = fds[1];
-	free(arg);
+	Channel *c;
+	void **argv = arg;
+
+	readfd = (intptr)argv[0];
+	writefd = (intptr)argv[1];
+	c = argv[2];
+	free(argv);
+
 	proxyfcalls(readfd, writefd);
+	sendp(c, smprint("%r"));
 }
 
 static void
@@ -78,13 +90,15 @@ readproc(void *arg)
 	uchar *mbuf;
 	int fd;
 	Channel *ch;
-	void **args = (void **)arg;
+	void **argv = (void **)arg;
 	
-	ch = (Channel *)args[0];
-	fd = (uint)(intptr)args[1];
+	ch = (Channel *)argv[0];
+	fd = (uint)(intptr)argv[1];
 
 	while((mbuf = readmsg(fd)) != nil)
 		sendp(ch, mbuf);
+
+	sendp(ch, nil);
 }
 
 static uchar *

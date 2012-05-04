@@ -45,6 +45,7 @@ serve()
 {
 	int afd, lfd;
 	char dir[100], adir[100], buf[200];
+	Alt a[3];
 	
 	snprint(buf, sizeof buf, "unix!%s", sockpath);
 
@@ -52,19 +53,21 @@ serve()
 	if((afd = announce(buf, adir)) < 0)
 		sysfatal("announce: %r");
 
-  Listen:
 	if ((lfd = listen(adir, dir)) < 0)
 		goto Error;
-		
-	procproxyfcalls(0, lfd);
-	proxyfcalls(lfd, 1);
 
+	a[0].c = procproxyfcalls(lfd, 1);
+	a[0].op = CHANRCV;
+	a[1].c = procproxyfcalls(0, lfd);
+	a[1].op = CHANRCV;
+	a[2].op = CHANEND;
+
+	werrstr(a[alt(a)].v);
 	close(lfd);
-	goto Listen;
-	
+
   Error:
 	close(afd);
-	threadexitsall("serve");
+	threadexitsall("%r");
 }
 
 void
